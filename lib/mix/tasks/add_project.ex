@@ -13,15 +13,25 @@ defmodule Mix.Tasks.Add.Project do
   end
 
   defp add_project_to_inch_ci(project_slug) do
-    dir = System.tmp_dir!
-    clone_repo(project_slug, dir)
+    IO.puts "project:"
+    IO.inspect project_slug
+
+    clone_repo(project_slug, System.tmp_dir!)
   end
 
   defp clone_repo(project_slug, dir) do
     project_dir = Path.join(dir, "tmp")
+    if File.dir?(project_dir) do
+      File.rm_rf(project_dir)
+    end
+
     git_url = "https://github.com/#{project_slug}.git"
     System.cmd("git" , ["clone", git_url, project_dir], [cd: dir])
-    System.cmd("mix" , ["deps.get"], [cd: project_dir])
+
+    # Add inch_ex dependency
+    add_inch_ex_dependency Path.join(project_dir, "mix.exs")
+
+    System.cmd("mix", ["deps.get"], [cd: project_dir])
 
     case run_inch_report(project_dir) do
       {:ok, output} -> IO.puts output
@@ -29,8 +39,21 @@ defmodule Mix.Tasks.Add.Project do
     end
   end
 
+  defp add_inch_ex_dependency(mix_filename) do
+    mix_content = File.read!(mix_filename)
+    case InchAddition.AddInchEx.on_string(mix_content) do
+      nil -> IO.puts "[ERROR] could not add :inch_ex dep"
+      new_content ->
+        File.write!(mix_filename, new_content)
+        IO.puts "---------------------------------------------------------------"
+        IO.puts new_content
+        IO.puts "---------------------------------------------------------------"
+    end
+  end
+
   defp env do
     [
+      {"MIX_ENV", "docs"},
       {"TRAVIS", "true"},
       {"TRAVIS_PULL_REQUEST", "false"}
     ]
