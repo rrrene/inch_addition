@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Add.Project do
   def run(args) do
     case Enum.at(args, 0) do
       nil -> IO.puts "[ABORT] Please provide a project slug (username/repo) in project_name file."
-      project_slug -> add_project_to_inch_ci(project_slug)
+      project_slug -> String.strip(project_slug) |> add_project_to_inch_ci
     end
   end
 
