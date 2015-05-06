@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Add.Project do
     end
 
     git_url = "https://github.com/#{project_slug}.git"
-    System.cmd("git" , ["clone", git_url, project_dir], [cd: dir])
+    System.cmd("git", ["clone", git_url, project_dir, "--depth=1"], [cd: dir])
 
     # Add inch_ex dependency
     add_inch_ex_dependency Path.join(project_dir, "mix.exs")
@@ -52,18 +52,23 @@ defmodule Mix.Tasks.Add.Project do
     end
   end
 
-  defp env(project_slug) do
+  defp env(project_slug, project_dir) do
+    {branch_name, 0} = System.cmd("git", ["rev-parse", "--abbrev-ref", "HEAD"], [cd: project_dir])
+    branch_name = String.strip(branch_name)
+    {commit, 0} = System.cmd("git", ["rev-parse", "HEAD"], [cd: project_dir])
+    commit = String.strip(commit)
     [
       {"MIX_ENV", "docs"},
       {"TRAVIS", "true"},
       {"TRAVIS_PULL_REQUEST", "false"},
       {"TRAVIS_REPO_SLUG", project_slug},
-      {"TRAVIS_BRANCH", "master"}
+      {"TRAVIS_BRANCH", branch_name},
+      {"TRAVIS_COMMIT", commit}
     ]
   end
 
   defp run_inch_report(project_slug, project_dir) do
-    case System.cmd("mix" , ["inch.report"], [cd: project_dir, env: env(project_slug)]) do
+    case System.cmd("mix" , ["inch.report"], [cd: project_dir, env: env(project_slug, project_dir)]) do
       {output, 0} -> {:ok, output}
       {_, _} -> {:error}
     end
