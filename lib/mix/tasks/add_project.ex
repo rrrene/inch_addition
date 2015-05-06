@@ -16,7 +16,12 @@ defmodule Mix.Tasks.Add.Project do
     IO.puts "project:"
     IO.inspect project_slug
 
-    clone_repo(project_slug, System.tmp_dir!)
+    project_dir = clone_repo(project_slug, System.tmp_dir!)
+
+    case run_inch_report(project_slug, project_dir) do
+      {:ok, output} -> IO.puts output
+      {:error} -> IO.puts "Running Inch failed."
+    end
   end
 
   defp clone_repo(project_slug, dir) do
@@ -32,11 +37,7 @@ defmodule Mix.Tasks.Add.Project do
     add_inch_ex_dependency Path.join(project_dir, "mix.exs")
 
     System.cmd("mix", ["deps.get"], [cd: project_dir])
-
-    case run_inch_report(project_dir) do
-      {:ok, output} -> IO.puts output
-      {:error} -> IO.puts "Running Inch failed."
-    end
+    project_dir
   end
 
   defp add_inch_ex_dependency(mix_filename) do
@@ -51,16 +52,18 @@ defmodule Mix.Tasks.Add.Project do
     end
   end
 
-  defp env do
+  defp env(project_slug) do
     [
       {"MIX_ENV", "docs"},
       {"TRAVIS", "true"},
-      {"TRAVIS_PULL_REQUEST", "false"}
+      {"TRAVIS_PULL_REQUEST", "false"},
+      {"TRAVIS_REPO_SLUG", project_slug},
+      {"TRAVIS_BRANCH", "master"}
     ]
   end
 
-  defp run_inch_report(project_dir) do
-    case System.cmd("mix" , ["inch.report"], [cd: project_dir, env: env]) do
+  defp run_inch_report(project_slug, project_dir) do
+    case System.cmd("mix" , ["inch.report"], [cd: project_dir, env: env(project_slug)]) do
       {output, 0} -> {:ok, output}
       {_, _} -> {:error}
     end
