@@ -9,4 +9,4 @@ before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
   - mix local.hex --force
   - mix deps.get --only test
-script: cat project_name | xargs mix add_project
+script: cat project_name | xargs mix add.project
